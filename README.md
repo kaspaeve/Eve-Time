@@ -1,2 +1,2 @@
 # Eve-Time
-Discord bot written using discord.py for the current eve time
+Discord bot written using discord.py for the current time/date in Eve Online
