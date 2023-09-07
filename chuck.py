@@ -4,8 +4,8 @@ import pytz
 from discord.ext import commands
 
 
-bot_token = 'MjgyNjU2NjY1NzUxMjU3MDg4.Gxyg1w.7rnJJjHUZOfcHp1mKJjA16wstcGodsGmYWkJqo'
-allowed_channel_id = 463535782750060544  # Replace with the ID of the allowed channel
+bot_token = config('BOT_TOKEN')
+allowed_channel_id = int(config('ALLOWED_CHANNEL_ID'))  # Convert to int since channel IDs are integers
 
 intents = discord.Intents.default()
 intents.message_content = True  # Allows access to message content
