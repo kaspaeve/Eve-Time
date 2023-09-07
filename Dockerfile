@@ -20,4 +20,4 @@ EXPOSE 80
 # ENV NAME=World
 
 # Run your_script_name.py when the container launches
-CMD ["python", "your_bot_script_name.py"]
+CMD ["python", "chuck.py"]
