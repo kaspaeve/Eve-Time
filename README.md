@@ -4,6 +4,7 @@ Eve-Time is a simple Discord bot created to fetch and display the current time i
 
 ## Table of Contents
 - [Features](#features)
+- [Dependencies](#Dependencies)
 - [Configuration](#configuration)
 - [Running the Bot](#running-the-bot)
 
@@ -11,7 +12,7 @@ Eve-Time is a simple Discord bot created to fetch and display the current time i
 - Fetch the current UTC time (Eve time).
 - Display the current time in various US time zones (CST, EST, PST, MST).
 
-## Dependencies Installation
+## Dependencies
 
 To ensure that the bot runs smoothly, you must install a few dependencies. Here's a list of everything you'll need:
 
