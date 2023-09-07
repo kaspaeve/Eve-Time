@@ -11,6 +11,31 @@ Eve-Time is a simple Discord bot created to fetch and display the current time i
 - Fetch the current UTC time (Eve time).
 - Display the current time in various US time zones (CST, EST, PST, MST).
 
+## Dependencies Installation
+
+To ensure that the bot runs smoothly, you must install a few dependencies. Here's a list of everything you'll need:
+
+### 1. Discord.py 
+This is the main library that allows our script to interact with the Discord API.
+```bash
+pip install discord.py
+```
+
+### 2. Datetime 
+While it's a built-in module in Python, you might need it to handle date and time functionalities.
+
+### 3. Pytz 
+This library allows you to work with time zones.
+```bash
+pip install pytz
+```
+
+### 4. Python Decouple 
+Useful for extracting configuration values from `.env` files.
+```bash
+pip install python-decouple
+```
+
 ## Configuration
 
 1. **Clone the repository:**
