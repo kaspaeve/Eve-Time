@@ -1,13 +1,9 @@
-version: '3'
-
 services:
   eve-time-bot:
-    build:
+    image: kaspaeve/eve-time:latest
+    build: 
       context: https://github.com/kaspaeve/Eve-Time.git
       dockerfile: Dockerfile
-    volumes:
-      - ./data:/app/data
     environment:
       - BOT_TOKEN=your_bot_token
       - ALLOWED_CHANNEL_ID=your_allowed_channel_id
-    restart: always
