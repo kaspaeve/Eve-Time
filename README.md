@@ -125,7 +125,7 @@ Deploying the Eve-Time bot using Docker and `docker-compose` simplifies the proc
 
 This approach ensures that your bot runs in an isolated environment, making it less susceptible to discrepancies between development and production environments.
 
-### **Docker-Compose YML
+## **Docker-Compose YML
 ```
 services:
   eve-time-bot:
