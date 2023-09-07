@@ -40,4 +40,4 @@ Once the bot is running, use the `!time` command in the allowed channel to fetch
 
 ---
 
-**Note:** Ensure you have the necessary Python packages installed and the environment properly set up to run the bot.
+**Note:** Ensure you have the necessary Python packages installed and the environment properly set up to run the bot. 
