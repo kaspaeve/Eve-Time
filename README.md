@@ -7,7 +7,7 @@ Eve-Time is a simple Discord bot created to fetch and display the current time i
 - [Dependencies](#Dependencies)
 - [Configuration](#configuration)
 - [Running the Bot](#running-the-bot)
-- [Docker-Compose Deployment](#Docker-Compose Deployment)
+- [Docker-Compose Deployment](#Docker-Compose-Deployment)
 
 ## Features
 - Fetch the current UTC time (Eve Online time).
