@@ -31,6 +31,7 @@ async def time(ctx):
             time_str_utc = current_time_utc.strftime(time_format)
 
             time_zones = {
+                'AEST': 'Australia/Sydney', 
                 'EST': 'America/New_York',
                 'CST': 'America/Chicago',
                 'MST': 'America/Denver',
