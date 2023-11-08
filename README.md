@@ -64,7 +64,7 @@ pip install python-decouple
 
 1. **Execute the Python script:**
     ```bash
-    python your_bot_script_name.py
+    python chuck.py
     ```
 
 Once the bot is running, use the `!time` command in the allowed channel to fetch and display the current time.
