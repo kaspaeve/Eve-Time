@@ -6,11 +6,12 @@ import datetime
 import pytz
 import feedparser
 import asyncio
-from sqlalchemy import create_engine, Column, String, DateTime
+from sqlalchemy import create_engine, Column, String, DateTime, Integer, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.exc import NoResultFound
 import aiohttp
+import re
 
 # Setting up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -29,15 +30,26 @@ intents.dm_messages = False
 bot = commands.Bot(command_prefix='!', intents=intents)
 
 # Database Setup
+engine = create_engine('sqlite:///chuck.db')  # New database file
 Base = declarative_base()
 
 class LastUpdate(Base):
     __tablename__ = 'last_update'
-    id = Column(String, primary_key=True, default='eve_online_patch_notes')
+    id = Column(String, primary_key=True, unique=True, default='eve_online_patch_notes')
     last_published = Column(DateTime)
 
-engine = create_engine('sqlite:///rss_feed.db')
+class Reminder(Base):
+    __tablename__ = 'reminders'
+    id = Column(Integer, primary_key=True)
+    user_id = Column(String, nullable=False)
+    reminder_time = Column(DateTime, nullable=False)
+    reminder_message = Column(String, nullable=False)
+    sent = Column(Boolean, default=False, nullable=False)
+
+# Create all tables in the database
 Base.metadata.create_all(engine)
+
+# Setup session factory
 DBSession = sessionmaker(bind=engine)
 session = DBSession()
 
@@ -144,6 +156,63 @@ async def eve_status(ctx):
     embed.add_field(name="Player Count", value=player_count, inline=True)
 
     await ctx.send(embed=embed)
+
+@bot.command(name='remindme') 
+async def remindme(ctx, time_string: str, *, reminder: str = "Reminder!"):
+    """Set a reminder. Example usage: !remindme 10m Check the oven."""
+    # Parsing time_string to determine reminder time
+    delta = None
+    match = re.match(r"(\d+)([smhd])", time_string)
+    if match:
+        amount, unit = match.groups()
+        amount = int(amount)
+        if unit == 's':
+            delta = datetime.timedelta(seconds=amount)
+        elif unit == 'm':
+            delta = datetime.timedelta(minutes=amount)
+        elif unit == 'h':
+            delta = datetime.timedelta(hours=amount)
+        elif unit == 'd':
+            delta = datetime.timedelta(days=amount)
+    else:
+        await ctx.send("Sorry, I couldn't understand the time. Please use [number][s/m/h/d].")
+        return
+
+    reminder_time = datetime.datetime.utcnow() + delta
+    session = DBSession()
+    new_reminder = Reminder(user_id=str(ctx.author.id),
+                            reminder_time=reminder_time,
+                            reminder_message=reminder,
+                            sent=False)
+    session.add(new_reminder)
+    session.commit()
+    session.close()
+    
+    await ctx.send(f"Got it! I'll remind you about '{reminder}' at {reminder_time.strftime('%Y-%m-%d %H:%M:%S UTC')}.")
+
+async def check_reminders():
+    """Check for due reminders and send them."""
+    await bot.wait_until_ready()
+    while not bot.is_closed():
+        now = datetime.datetime.utcnow()
+        session = DBSession()
+        due_reminders = session.query(Reminder).filter(Reminder.reminder_time <= now, Reminder.sent == False).all()
+        
+        for reminder in due_reminders:
+            user = bot.get_user(int(reminder.user_id))
+            if user:
+                try:
+                    await user.send(f"Here's your reminder: {reminder.reminder_message}")
+                    reminder.sent = True
+                except discord.Forbidden:
+                    logger.info(f"Cannot send DM to {user.name}")
+        
+        session.commit()
+        session.close()
+        await asyncio.sleep(60)  # Check every 60 seconds
+
+bot.loop.create_task(check_reminders())
+
 
 @bot.event
 async def on_ready():
