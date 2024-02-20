@@ -10,6 +10,7 @@ from sqlalchemy import create_engine, Column, String, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.exc import NoResultFound
+import aiohttp
 
 # Setting up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -117,6 +118,32 @@ async def rss_feed_task():
         # Adjust sleep time as needed; here it's set to 1800 seconds (30 minutes)
         await asyncio.sleep(3600)  # Check every 30 minutes
     logger.info("Bot is closed, stopping the RSS feed task.")
+async def fetch_eve_online_status():
+    """Fetches EVE Online server status."""
+    url = "https://esi.evetech.net/latest/status/?datasource=tranquility"
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as response:
+            if response.status == 200:
+                data = await response.json()
+                status = 'Online'
+                player_count = data.get('players', 'N/A')
+            else:
+                status = 'Offline'
+                player_count = 'N/A'
+    return status, player_count
+
+@bot.command(name='status', aliases=['tq', 'eve'])
+async def eve_status(ctx):
+    """Shows the current status of EVE Online's Tranquility server."""
+    status, player_count = await fetch_eve_online_status()
+
+    embed = discord.Embed(title="EVE Online Status", color=0x3498db)
+    embed.set_footer(text="I'll be the Chuck to your Norris.")
+    embed.set_thumbnail(url="https://image.eveonline.com/Alliance/434243723_64.png")
+    embed.add_field(name="Server State", value=status, inline=True)
+    embed.add_field(name="Player Count", value=player_count, inline=True)
+
+    await ctx.send(embed=embed)
 
 @bot.event
 async def on_ready():
