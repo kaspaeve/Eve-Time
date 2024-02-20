@@ -58,6 +58,7 @@ pip install python-decouple
     ```env
     BOT_TOKEN=Your_Discord_Bot_Token
     ALLOWED_CHANNEL_ID=Your_Allowed_Channel_ID
+    FEED_CHANNEL_ID=Your_patch_notes_Channel_ID
     ```
 
 ## Running the Bot
@@ -131,10 +132,7 @@ This approach ensures that your bot runs in an isolated environment, making it l
 ```
 services:
   eve-time-bot:
-    image: kaspaeve/eve-time:latest
-    build: 
-      context: https://github.com/kaspaeve/Eve-Time.git
-      dockerfile: Dockerfile
+    image: kaspa101/eve-time:latest
     environment:
       - BOT_TOKEN=your_bot_token
       - ALLOWED_CHANNEL_ID=your_allowed_channel_id
