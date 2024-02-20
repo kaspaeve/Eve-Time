@@ -22,7 +22,7 @@ logger = logging.getLogger()
 bot_token = config('BOT_TOKEN')
 allowed_channel_id = int(config('ALLOWED_CHANNEL_ID'))
 feed_channel_id = int(config('FEED_CHANNEL_ID'))
-version = 1.03
+version = 'v1.04'
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -221,21 +221,17 @@ async def check_reminders():
         session.close()
         await asyncio.sleep(60)  # Check every 60 seconds
 
-def log_with_art(level, message):
+def log_error_with_art(message):
     art = r"""
     /~`|_     _|   |\ | _  _ _. _
     \_,| ||_|(_|<  | \|(_)| | |_\ 
                                   """
-    log_message = f"{message}\n{art}"
-    if level.lower() == 'info':
-        logger.info(log_message)
-    elif level.lower() == 'error':
-        logger.error(log_message)
+    logger.error(f"{message}\n{art}")
 
 @bot.event
 async def on_ready():
-    logger.info(f'Chuck Norris is running {version} by kaspa')
     log_error_with_art(f"")
+    logger.info(f'Chuck Norris is running {version} by kaspa')
     logger.info(f'Logged in as {bot.user.name}')
 
     bot.loop.create_task(check_reminders())
