@@ -10,6 +10,7 @@ from sqlalchemy import create_engine, Column, String, DateTime, Integer, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.exc import NoResultFound
+from sqlalchemy.orm import declarative_base
 import aiohttp
 import re
 
@@ -21,6 +22,7 @@ logger = logging.getLogger()
 bot_token = config('BOT_TOKEN')
 allowed_channel_id = int(config('ALLOWED_CHANNEL_ID'))
 feed_channel_id = int(config('FEED_CHANNEL_ID'))
+version = 1.03
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -130,6 +132,7 @@ async def rss_feed_task():
         # Adjust sleep time as needed; here it's set to 1800 seconds (30 minutes)
         await asyncio.sleep(3600)  # Check every 30 minutes
     logger.info("Bot is closed, stopping the RSS feed task.")
+
 async def fetch_eve_online_status():
     """Fetches EVE Online server status."""
     url = "https://esi.evetech.net/latest/status/?datasource=tranquility"
@@ -189,6 +192,7 @@ async def remindme(ctx, time_string: str, *, reminder: str = "Reminder!"):
     session.close()
     
     await ctx.send(f"Got it! I'll remind you about '{reminder}' at {reminder_time.strftime('%Y-%m-%d %H:%M:%S UTC')}.")
+    logger.info(f"RemindMe command called by {ctx.author} with time_string: {time_string} and reminder: {reminder}.")
 
 async def check_reminders():
     """Check for due reminders and send them."""
@@ -197,27 +201,44 @@ async def check_reminders():
         now = datetime.datetime.utcnow()
         session = DBSession()
         due_reminders = session.query(Reminder).filter(Reminder.reminder_time <= now, Reminder.sent == False).all()
+        logger.info(f"Checking for due reminders at {now}, found {len(due_reminders)} due reminders.")
         
         for reminder in due_reminders:
-            user = bot.get_user(int(reminder.user_id))
-            if user:
-                try:
+            try:
+                user = await bot.fetch_user(int(reminder.user_id))  # Changed to fetch_user for reliability
+                if user:
                     await user.send(f"Here's your reminder: {reminder.reminder_message}")
-                    reminder.sent = True
-                except discord.Forbidden:
-                    logger.info(f"Cannot send DM to {user.name}")
+                    reminder.sent = True  # Mark as sent
+                    logger.info(f"Sent reminder to {user.name} (ID: {user.id}).")
+                else:
+                    logger.warning(f"Could not find user ID {reminder.user_id}.")
+            except discord.Forbidden:
+                logger.info(f"Cannot send DM to {user.name} (ID: {user.id}).")
+            except Exception as e:
+                logger.error(f"Error sending reminder to {user.name} (ID: {user.id}): {e}", exc_info=True)
         
-        session.commit()
+        session.commit()  # Commit all changes
         session.close()
         await asyncio.sleep(60)  # Check every 60 seconds
 
-bot.loop.create_task(check_reminders())
-
+def log_with_art(level, message):
+    art = r"""
+    /~`|_     _|   |\ | _  _ _. _
+    \_,| ||_|(_|<  | \|(_)| | |_\ 
+                                  """
+    log_message = f"{message}\n{art}"
+    if level.lower() == 'info':
+        logger.info(log_message)
+    elif level.lower() == 'error':
+        logger.error(log_message)
 
 @bot.event
 async def on_ready():
+    logger.info(f'Chuck Norris is running {version} by kaspa')
+    log_error_with_art(f"")
     logger.info(f'Logged in as {bot.user.name}')
-    print(f'Logged in as {bot.user.name}')
+
+    bot.loop.create_task(check_reminders())
     bot.loop.create_task(rss_feed_task())
 
 bot.run(bot_token)
