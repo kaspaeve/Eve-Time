@@ -13,6 +13,7 @@ from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm import declarative_base
 import aiohttp
 import re
+from sqlalchemy import ForeignKey
 
 # Setting up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -47,6 +48,18 @@ class Reminder(Base):
     reminder_time = Column(DateTime, nullable=False)
     reminder_message = Column(String, nullable=False)
     sent = Column(Boolean, default=False, nullable=False)
+
+class CommandUsage(Base):
+    __tablename__ = 'command_usage'
+    id = Column(Integer, primary_key=True)
+    command_name = Column(String, nullable=False)
+    count = Column(Integer, default=0, nullable=False)
+
+class SentReminder(Base):
+    __tablename__ = 'sent_reminders'
+    id = Column(Integer, primary_key=True)
+    reminder_id = Column(Integer, ForeignKey('reminders.id'), nullable=False)
+    sent_time = Column(DateTime, nullable=False)
 
 # Create all tables in the database
 Base.metadata.create_all(engine)
@@ -94,6 +107,7 @@ async def time(ctx):
         logger.error(f"An error occurred: {e}")
         print(f"An error occurred: {e}")
         await ctx.send('An error occurred. Please try again later.')
+
 async def check_rss_feed():
     feed_url = 'https://www.eveonline.com/rss/patch-notes'
     try:
@@ -124,6 +138,7 @@ async def check_rss_feed():
             logger.info("RSS feed checked successfully.")
     except Exception as e:
         logger.error(f"An error occurred while checking the RSS feed: {e}")
+
 
 async def rss_feed_task():
     await bot.wait_until_ready()

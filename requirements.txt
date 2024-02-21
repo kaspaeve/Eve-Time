@@ -3,3 +3,5 @@ pytz
 python-decouple
 feedparser
 SQLAlchemy
+aiohttp>=3.7.4
+PyNaCl
