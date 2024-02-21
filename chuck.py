@@ -49,17 +49,18 @@ class Reminder(Base):
     reminder_message = Column(String, nullable=False)
     sent = Column(Boolean, default=False, nullable=False)
 
-class CommandUsage(Base):
-    __tablename__ = 'command_usage'
-    id = Column(Integer, primary_key=True)
-    command_name = Column(String, nullable=False)
-    count = Column(Integer, default=0, nullable=False)
-
 class SentReminder(Base):
     __tablename__ = 'sent_reminders'
     id = Column(Integer, primary_key=True)
     reminder_id = Column(Integer, ForeignKey('reminders.id'), nullable=False)
     sent_time = Column(DateTime, nullable=False)
+
+class CommandUsage(Base):
+    __tablename__ = 'command_usage'
+    id = Column(Integer, primary_key=True)
+    command_name = Column(String, nullable=False)
+    usage_count = Column(Integer, default=0, nullable=False)
+
 
 # Create all tables in the database
 Base.metadata.create_all(engine)
@@ -70,6 +71,9 @@ session = DBSession()
 
 @bot.command()
 async def time(ctx):
+    session = DBSession()
+    increment_command_usage(session, 'time')
+    session.close()
     try:
         if ctx.channel.id == allowed_channel_id:
             current_time_utc = datetime.datetime.utcnow()
@@ -114,31 +118,25 @@ async def check_rss_feed():
         feed = feedparser.parse(feed_url)
         
         # Query the last update from the database
-        try:
-            last_update = session.query(LastUpdate).filter_by(id='eve_online_patch_notes').first()
-        except NoResultFound:
-            last_update = None
+        last_update = session.query(LastUpdate).filter_by(id='eve_online_patch_notes').first()
+        last_published_timestamp = last_update.last_published if last_update else None
         
-        if feed.entries:
-            for entry in reversed(feed.entries):  # Check from oldest to newest
+        if feed.entries and last_published_timestamp:
+            for entry in reversed(feed.entries):
                 published = datetime.datetime(*entry.published_parsed[:6])
-                if last_update is None or last_update.last_published is None or published > last_update.last_published:
+                if published > last_published_timestamp:
                     channel = bot.get_channel(feed_channel_id)
-                    if channel:  # Check if the channel was found
+                    if channel:
                         embed = discord.Embed(title=entry.title, url=entry.link, description="New EVE Online patch notes available!", color=0x3498db)
                         await channel.send(embed=embed)
-                        if last_update:
-                            last_update.last_published = published
-                        else:
-                            last_update = LastUpdate(id='eve_online_patch_notes', last_published=published)
-                            session.add(last_update)
-                        session.commit()
                     else:
                         logger.error(f"Channel with ID {feed_channel_id} not found.")
+                    last_published_timestamp = published
+            last_update.last_published = last_published_timestamp
+            session.commit()
             logger.info("RSS feed checked successfully.")
     except Exception as e:
         logger.error(f"An error occurred while checking the RSS feed: {e}")
-
 
 async def rss_feed_task():
     await bot.wait_until_ready()
@@ -163,7 +161,11 @@ async def fetch_eve_online_status():
     return status, player_count
 
 @bot.command(name='status', aliases=['tq', 'eve'])
+
 async def eve_status(ctx):
+    session = DBSession()
+    increment_command_usage(session, 'status')
+    session.close()
     """Shows the current status of EVE Online's Tranquility server."""
     status, player_count = await fetch_eve_online_status()
 
@@ -176,6 +178,7 @@ async def eve_status(ctx):
     await ctx.send(embed=embed)
 
 @bot.command(name='remindme') 
+
 async def remindme(ctx, time_string: str, *, reminder: str = "Reminder!"):
     """Set a reminder. Example usage: !remindme 10m Check the oven."""
     # Parsing time_string to determine reminder time
@@ -211,6 +214,7 @@ async def remindme(ctx, time_string: str, *, reminder: str = "Reminder!"):
 
 async def check_reminders():
     """Check for due reminders and send them."""
+    session = DBSession()
     await bot.wait_until_ready()
     while not bot.is_closed():
         now = datetime.datetime.utcnow()
@@ -224,6 +228,8 @@ async def check_reminders():
                 if user:
                     await user.send(f"Here's your reminder: {reminder.reminder_message}")
                     reminder.sent = True  # Mark as sent
+                    session.commit() 
+                    increment_command_usage(session, 'remindme_sent')
                     logger.info(f"Sent reminder to {user.name} (ID: {user.id}).")
                 else:
                     logger.warning(f"Could not find user ID {reminder.user_id}.")
@@ -235,6 +241,24 @@ async def check_reminders():
         session.commit()  # Commit all changes
         session.close()
         await asyncio.sleep(60)  # Check every 60 seconds
+
+def increment_command_usage(session, command_name):
+    try:
+        # Check if the command usage record already exists
+        usage_record = session.query(CommandUsage).filter_by(command_name=command_name).first()
+        if usage_record:
+            usage_record.usage_count += 1
+        else:
+            # If not, create a new record with usage_count set to 1
+            usage_record = CommandUsage(command_name=command_name, usage_count=1)
+            session.add(usage_record)
+        session.commit()
+    except Exception as e:
+        logger.error(f"Error incrementing command usage for {command_name}: {e}", exc_info=True)
+        session.rollback()  # Rollback in case of error
+    finally:
+        session.close()
+
 
 def log_error_with_art(message):
     art = r"""
@@ -248,6 +272,11 @@ async def on_ready():
     log_error_with_art(f"")
     logger.info(f'Chuck Norris is running {version} by kaspa')
     logger.info(f'Logged in as {bot.user.name}')
+    session = DBSession()
+    logger.info(f'Attempting to open Stat Counting stream.')
+    increment_command_usage(session, 'bot_start')
+    session.close()
+    logger.info(f'Success! Counting Chuck Norris round house kicks!')
 
     bot.loop.create_task(check_reminders())
     bot.loop.create_task(rss_feed_task())
