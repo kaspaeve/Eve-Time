@@ -9,4 +9,4 @@ class Ping(commands.Cog):
         await ctx.send('Pong!')
 
 async def setup(bot):
-    await bot.add_cog(Ping(bot))  # Ensure this is awaited
+    await bot.add_cog(Ping(bot)) 

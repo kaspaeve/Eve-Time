@@ -7,10 +7,9 @@ from discord import app_commands
 class ChuckJokesCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.jokes_db = 'chuck_norris_jokes.db'  # Jokes database
-        self.stats_db = 'chuck.db'  # Statistics database
+        self.jokes_db = 'chuck_norris_jokes.db' 
+        self.stats_db = 'chuck.db' 
 
-        # Connect to the jokes database
         try:
             self.conn_jokes = sqlite3.connect(self.jokes_db)
             self.cursor_jokes = self.conn_jokes.cursor()
@@ -18,12 +17,10 @@ class ChuckJokesCog(commands.Cog):
         except sqlite3.Error as e:
             logging.error(f"Database connection error (jokes): {e}")
 
-        # Connect to the statistics database
         try:
             self.conn_stats = sqlite3.connect(self.stats_db)
             self.cursor_stats = self.conn_stats.cursor()
 
-            # Create joke_requests table if it doesn't exist
             self.cursor_stats.execute('''
                 CREATE TABLE IF NOT EXISTS joke_requests (
                     user_id INTEGER PRIMARY KEY,
@@ -50,7 +47,6 @@ class ChuckJokesCog(commands.Cog):
         username = str(interaction.user) 
 
         try:
-            # Fetch a random joke from the jokes database
             self.cursor_jokes.execute('SELECT joke FROM jokes ORDER BY RANDOM() LIMIT 1')
             joke_row = self.cursor_jokes.fetchone()
 
@@ -69,7 +65,6 @@ class ChuckJokesCog(commands.Cog):
                     logging.warning(f"Interaction expired before sending the response for user {username}.")
                     return
 
-                # Update or insert the user's joke request count in the statistics database
                 self.cursor_stats.execute('SELECT request_count FROM joke_requests WHERE user_id = ?', (user_id,))
                 user_request = self.cursor_stats.fetchone()
 
