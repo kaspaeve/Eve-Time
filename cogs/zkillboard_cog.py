@@ -17,7 +17,7 @@ class ZKillboardCog(commands.Cog):
         self.min_value = int(config('MIN_VALUE'))  # Minimum ISK value to consider as a valuable kill
         self.kills_channel_id = int(config('KILLS_CHANNEL_ID'))
 
-        self.kills_processed = set()  # To track processed killmails
+        self.kills_processed = set()  
 
         try:
             self.conn = sqlite3.connect('chuck.db')
@@ -31,10 +31,9 @@ class ZKillboardCog(commands.Cog):
                                    value TEXT
                                    )''')
 
-            # Retrieve the last processed killmail time from metadata
             self.cursor.execute('SELECT value FROM metadata WHERE key = "last_processed_time"')
             row = self.cursor.fetchone()
-            self.last_processed_time = row[0] if row else None  # None if not found
+            self.last_processed_time = row[0] if row else None  
 
             self.conn.commit()
             log.info(f"Connected to the kills database successfully. Last processed killmail time: {self.last_processed_time}")
@@ -58,7 +57,7 @@ class ZKillboardCog(commands.Cog):
                         if 'application/json' not in content_type:
                             log.error(f"Unexpected Content-Type {content_type} from URL {url}")
                             content = await resp.text()
-                            log.debug(f"Response content: {content[:500]}")  # Log the first 500 characters of the response
+                            log.debug(f"Response content: {content[:500]}") 
                             continue
 
                         if resp.status != 200:
@@ -80,33 +79,31 @@ class ZKillboardCog(commands.Cog):
                                     log.warning(f"Missing or invalid killmail ID or hash for package: {json.dumps(package)}")
                                     continue
 
-                                # Check if the killmail has already been processed
                                 self.cursor.execute('SELECT * FROM processed_kills WHERE kill_id = ?', (killmail_id,))
                                 if self.cursor.fetchone():
                                     log.info(f"Killmail ID {killmail_id} already processed, stopping further checks for region {region_id}.")
-                                    break  # Stop processing further killmails if a duplicate is found
+                                    break  
 
-                                # Fetch detailed killmail data to get the timestamp and other details
                                 detailed_killmail = await self.fetch_killmail_details(killmail_id, hash_value)
                                 if not detailed_killmail:
-                                    continue  # Skip if we can't fetch detailed data
+                                    continue  
 
                                 killmail_time = detailed_killmail.get('killmail_time')
                                 if not killmail_time:
                                     log.warning(f"Missing killmail_time for detailed killmail ID {killmail_id}")
                                     continue
 
-                                # Convert killmail_time to datetime for comparison
+                               
                                 killmail_time_dt = datetime.strptime(killmail_time, "%Y-%m-%dT%H:%M:%SZ")
 
                                 if self.last_processed_time:
                                     last_processed_dt = datetime.strptime(self.last_processed_time, "%Y-%m-%dT%H:%M:%SZ")
                                     if killmail_time_dt <= last_processed_dt:
                                         log.info(f"Skipping old killmail ID {killmail_id} with timestamp {killmail_time}, stopping further checks for region {region_id}.")
-                                        break  # Move to the next region
+                                        break  
 
-                                # Process the killmail
-                                if processed_count < 50:  # Limit processing to the latest 50 killmails per run
+                               
+                                if processed_count < 50:  #
                                     await self.process_killmail(detailed_killmail, zkb, killmail_time_dt)
                                     processed_count += 1
 
@@ -123,16 +120,16 @@ class ZKillboardCog(commands.Cog):
                 log.info("Starting a new cycle of killmail checks.")
                 await self.get_new_killmails()
                 log.info("Completed a cycle of killmail checks.")
-                await asyncio.sleep(60)  # Delay for 60 seconds between checks
+                await asyncio.sleep(60) 
             except (json.JSONDecodeError, KeyError) as e:
                 log.exception("Error in killmail data structure: %s", e)
-                await asyncio.sleep(10)  # Shorter delay in case of an error
+                await asyncio.sleep(10)  
             except aiohttp.ClientError as e:
                 log.exception("Network error when requesting new mails: %s", e)
-                await asyncio.sleep(10)  # Shorter delay in case of a network error
+                await asyncio.sleep(10)  
             except Exception as e:
                 log.exception("Unexpected error: %s", e)
-                await asyncio.sleep(10)  # Shorter delay in case of an unexpected error
+                await asyncio.sleep(10)  
 
 
     async def fetch_killmail_details(self, killmail_id, hash_value):
@@ -162,13 +159,12 @@ class ZKillboardCog(commands.Cog):
                     self.conn.commit()
                     await self.send_kill_notification(detailed_killmail, zkb, region_id)
 
-                    # Update the last processed time
                     killmail_time = detailed_killmail['killmail_time']
                     await self.update_last_processed_time(killmail_time)
-                    return False  # No duplicate found
+                    return False  
                 else:
                     log.debug(f"Killmail {killmail_id} already processed.")
-                    return True  # Duplicate found
+                    return True 
             else:
                 log.debug(f"Killmail {killmail_id} does not match any of the specified regions or value threshold.")
                 return False
