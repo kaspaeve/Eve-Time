@@ -11,7 +11,7 @@ class HelpCog(commands.Cog):
     async def help_command(self, interaction: discord.Interaction):
         embed = discord.Embed(
             title="Chuck Norris Bot - Help",
-            description="Chuck Norris developed by kaspa and some AI. V1.01\n\nHere are the available commands:",
+            description="Chuck Norris developed by kaspa and some AI. V1.04\n\nHere are the available commands:",
             color=0x3498db
         )
 

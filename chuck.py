@@ -54,7 +54,7 @@ async def on_ready():
                                                                                  
     """
     print(ascii_art)
-    print(f'Chuck Norris by kaspa')
+    print(f'Chuck Norris by kaspa v1.04')
     logger.info("Bot is up and running!")
 
     try:
