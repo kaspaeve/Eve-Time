@@ -26,9 +26,9 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 
 async def load_cogs():
     await bot.wait_until_ready()
-    cogs = ['cogs.ping', 'cogs.time_cog', 'cogs.remind_cog', 'cogs.news_cog', 'cogs.poll_cog', 'cogs.help_cog','cogs.chuck_jokes_cog','cogs.zkillboard_cog']
+    cogs = ['cogs.ping', 'cogs.time_cog', 'cogs.remind_cog', 'cogs.news_cog', 'cogs.poll_cog', 'cogs.help_cog','cogs.chuck_jokes_cog','cogs.zkillboard_cog', 'cogs.confess_cog']
     for cog in cogs:
-        if cog not in bot.extensions: 
+        if cog not in bot.extensions:
             try:
                 await bot.load_extension(cog)
                 logger.info(f'{cog} loaded')
@@ -54,7 +54,7 @@ async def on_ready():
                                                                                  
     """
     print(ascii_art)
-    print(f'Chuck Norris by kaspa v1.04')
+    print(f'Chuck Norris by kaspa v1.06')
     logger.info("Bot is up and running!")
 
     try:
