@@ -1,14 +1,15 @@
+version: '3.8'
+
 services:
-  eve-time-bot:
-    image: kaspaeve/eve-time:latest
-    build: 
-      context: https://github.com/kaspaeve/Eve-Time.git
-      dockerfile: Dockerfile
+  eve-time-bot:  
+    build:
+      context: https://github.com/kaspaeve/Eve-Time.git  
+      dockerfile: Dockerfile  
     environment:
-      - BOT_TOKEN=your_bot_token
-      - GUILD_ID=server_id
-      - ALLOWED_CHANNEL_ID=
-      - NEWS_CHANNEL_ID=
-      - KILLS_CHANNEL_ID=
-      - REGION_ID=10000065,10000021,10000121,10000162
-      - MIN_VALUE=100000000
+      BOT_TOKEN: long_bot_token
+      GUILD_ID: "server_id"  
+      ALLOWED_CHANNEL_ID: "4channel_id"  
+      NEWS_CHANNEL_ID: "channel_id"  
+      KILLS_CHANNEL_ID: "channel_id"  
+      REGION_ID: "region_ID,10000014,10000031,10000031"  
+      MIN_VALUE: "isk_value"  
