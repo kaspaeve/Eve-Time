@@ -17,7 +17,7 @@ class ZKillboardCog(commands.Cog):
         self.min_value = int(config('MIN_VALUE'))  # Minimum ISK value to consider as a valuable kill
         self.kills_channel_id = int(config('KILLS_CHANNEL_ID'))
 
-        self.kills_processed = set()  
+        self.kills_processed = set()
 
         try:
             self.conn = sqlite3.connect('chuck.db')
@@ -33,7 +33,7 @@ class ZKillboardCog(commands.Cog):
 
             self.cursor.execute('SELECT value FROM metadata WHERE key = "last_processed_time"')
             row = self.cursor.fetchone()
-            self.last_processed_time = row[0] if row else None  
+            self.last_processed_time = row[0] if row else None
 
             self.conn.commit()
             log.info(f"Connected to the kills database successfully. Last processed killmail time: {self.last_processed_time}")
@@ -42,7 +42,23 @@ class ZKillboardCog(commands.Cog):
 
         self.listen_for_kills_task = self.bot.loop.create_task(self.listen_for_kills())
 
-
+    async def listen_for_kills(self):
+        log.debug("Starting to listen for killmails.")
+        while True:
+            try:
+                log.info("Starting a new cycle of killmail checks.")
+                await self.get_new_killmails()
+                log.info("Completed a cycle of killmail checks.")
+                await asyncio.sleep(60)
+            except (json.JSONDecodeError, KeyError) as e:
+                log.exception("Error in killmail data structure: %s", e)
+                await asyncio.sleep(10)
+            except aiohttp.ClientError as e:
+                log.exception("Network error when requesting new mails: %s", e)
+                await asyncio.sleep(10)
+            except Exception as e:
+                log.exception("Unexpected error: %s", e)
+                await asyncio.sleep(10)
 
     async def get_new_killmails(self):
         for region_id in self.region_ids:
@@ -57,7 +73,7 @@ class ZKillboardCog(commands.Cog):
                         if 'application/json' not in content_type:
                             log.error(f"Unexpected Content-Type {content_type} from URL {url}")
                             content = await resp.text()
-                            log.debug(f"Response content: {content[:500]}") 
+                            log.debug(f"Response content: {content[:500]}")
                             continue
 
                         if resp.status != 200:
@@ -82,28 +98,26 @@ class ZKillboardCog(commands.Cog):
                                 self.cursor.execute('SELECT * FROM processed_kills WHERE kill_id = ?', (killmail_id,))
                                 if self.cursor.fetchone():
                                     log.info(f"Killmail ID {killmail_id} already processed, stopping further checks for region {region_id}.")
-                                    break  
+                                    break
 
                                 detailed_killmail = await self.fetch_killmail_details(killmail_id, hash_value)
                                 if not detailed_killmail:
-                                    continue  
+                                    continue
 
                                 killmail_time = detailed_killmail.get('killmail_time')
                                 if not killmail_time:
                                     log.warning(f"Missing killmail_time for detailed killmail ID {killmail_id}")
                                     continue
 
-                               
                                 killmail_time_dt = datetime.strptime(killmail_time, "%Y-%m-%dT%H:%M:%SZ")
 
                                 if self.last_processed_time:
                                     last_processed_dt = datetime.strptime(self.last_processed_time, "%Y-%m-%dT%H:%M:%SZ")
                                     if killmail_time_dt <= last_processed_dt:
                                         log.info(f"Skipping old killmail ID {killmail_id} with timestamp {killmail_time}, stopping further checks for region {region_id}.")
-                                        break  
+                                        break
 
-                               
-                                if processed_count < 50:  #
+                                if processed_count < 50:
                                     await self.process_killmail(detailed_killmail, zkb, killmail_time_dt)
                                     processed_count += 1
 
@@ -112,25 +126,6 @@ class ZKillboardCog(commands.Cog):
                             log.error(f"JSON decode error for URL {url}: {e}")
                 except Exception as e:
                     log.exception(f"Unexpected error fetching killmails: {e}")
-
-    async def listen_for_kills(self):
-        log.debug("Starting to listen for killmails.")
-        while True:
-            try:
-                log.info("Starting a new cycle of killmail checks.")
-                await self.get_new_killmails()
-                log.info("Completed a cycle of killmail checks.")
-                await asyncio.sleep(60) 
-            except (json.JSONDecodeError, KeyError) as e:
-                log.exception("Error in killmail data structure: %s", e)
-                await asyncio.sleep(10)  
-            except aiohttp.ClientError as e:
-                log.exception("Network error when requesting new mails: %s", e)
-                await asyncio.sleep(10)  
-            except Exception as e:
-                log.exception("Unexpected error: %s", e)
-                await asyncio.sleep(10)  
-
 
     async def fetch_killmail_details(self, killmail_id, hash_value):
         url = f"https://esi.evetech.net/latest/killmails/{killmail_id}/{hash_value}/"
@@ -161,10 +156,10 @@ class ZKillboardCog(commands.Cog):
 
                     killmail_time = detailed_killmail['killmail_time']
                     await self.update_last_processed_time(killmail_time)
-                    return False  
+                    return False
                 else:
                     log.debug(f"Killmail {killmail_id} already processed.")
-                    return True 
+                    return True
             else:
                 log.debug(f"Killmail {killmail_id} does not match any of the specified regions or value threshold.")
                 return False
@@ -228,8 +223,33 @@ class ZKillboardCog(commands.Cog):
             location_link = f"[{solar_system_name}](https://evemaps.dotlan.net/system/{solar_system_name})"
             region_link = f"[{region_name}](https://evemaps.dotlan.net/map/{region_name.replace(' ', '_')})"
 
+            # Fetching the icon URL for the victim's ship
+            ship_icon_url = f"https://images.evetech.net/types/{ship_type_id}/render"
+
+            # Fetch the killer's information
+            attackers = killmail.get('attackers', [])
+            total_attackers = len(attackers)
+            final_blow = None
+
+            for attacker in attackers:
+                if attacker.get('final_blow'):
+                    final_blow = attacker
+                    break
+
+            if final_blow:
+                killer_name = await self.fetch_name('character', final_blow['character_id']) if final_blow.get('character_id') else 'Unknown'
+                killer_corp_name = await self.fetch_name('corporation', final_blow['corporation_id']) if final_blow.get('corporation_id') else 'Unknown'
+                killer_alliance_name = await self.fetch_name('alliance', final_blow['alliance_id']) if final_blow.get('alliance_id') else 'None'
+                killer_ship_name = await self.fetch_name('type', final_blow['ship_type_id']) if final_blow.get('ship_type_id') else 'Unknown'
+                killer_link = f"[{killer_name}](https://zkillboard.com/character/{final_blow['character_id']}/)" if final_blow.get('character_id') else 'Unknown'
+                killer_corp_link = f"[{killer_corp_name}](https://zkillboard.com/corporation/{final_blow['corporation_id']}/)" if final_blow.get('corporation_id') else 'Unknown'
+                killer_alliance_link = f"[{killer_alliance_name}](https://zkillboard.com/alliance/{final_blow['alliance_id']}/)" if final_blow.get('alliance_id') else 'None'
+            else:
+                killer_link = killer_corp_link = killer_alliance_link = killer_ship_name = 'Unknown'
+
             log.debug(f"Kill ID: {kill_id}, Total Value: {total_value:,} ISK")
             log.debug(f"Ship: {ship_name}, Character: {character_name}, Corporation: {corporation_name}, Alliance: {alliance_name}")
+            log.debug(f"Killer: {killer_name}, Killer Ship: {killer_ship_name}, Killer Corporation: {killer_corp_name}, Killer Alliance: {killer_alliance_name}")
             log.debug(f"Location: {solar_system_name}, Region: {region_name}, Time: {killmail_time}")
 
             embed = discord.Embed(
@@ -238,15 +258,21 @@ class ZKillboardCog(commands.Cog):
                 color=0xFF0000,
                 timestamp=datetime.strptime(killmail_time, "%Y-%m-%dT%H:%M:%SZ")  # Use killmail time from the data
             )
-            embed.add_field(name="Ship", value=ship_name, inline=True)
-            embed.add_field(name="Character", value=character_link, inline=True)
-            embed.add_field(name="Corporation", value=corporation_link, inline=True)
-            embed.add_field(name="Alliance", value=alliance_link, inline=True)
+            embed.add_field(name="Victim's Ship", value=ship_name, inline=True)
+            embed.add_field(name="Victim's Character", value=character_link, inline=True)
+            embed.add_field(name="Victim's Corporation", value=corporation_link, inline=True)
+            embed.add_field(name="Victim's Alliance", value=alliance_link, inline=True)
             embed.add_field(name="Location", value=location_link, inline=True)
             embed.add_field(name="Region", value=region_link, inline=True)
-            embed.add_field(name="Time", value=killmail_time, inline=True)
+            embed.add_field(name="Kill Time", value=killmail_time, inline=True)
+            embed.add_field(name="Killer's Name", value=killer_link, inline=True)
+            embed.add_field(name="Killer's Corporation", value=killer_corp_link, inline=True)
+            embed.add_field(name="Killer's Alliance", value=killer_alliance_link, inline=True)
+            embed.add_field(name="Killer's Ship", value=killer_ship_name, inline=True)
+            embed.add_field(name="Total Attackers", value=str(total_attackers), inline=True)
+            embed.set_thumbnail(url=ship_icon_url)  # Add the ship icon as a thumbnail
             embed.set_footer(text="Reported by Chuck Norris Bot")
-            
+
             await channel.send(embed=embed)
             log.info(f"Sent kill notification for kill ID {kill_id} with value {total_value:,} ISK.")
         except Exception as e:
