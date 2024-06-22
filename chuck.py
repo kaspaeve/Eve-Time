@@ -26,7 +26,18 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 
 async def load_cogs():
     await bot.wait_until_ready()
-    cogs = ['cogs.ping', 'cogs.time_cog', 'cogs.remind_cog', 'cogs.news_cog', 'cogs.poll_cog', 'cogs.help_cog','cogs.chuck_jokes_cog','cogs.zkillboard_cog', 'cogs.confess_cog']
+    cogs = [
+        'cogs.ping', 
+        'cogs.time_cog', 
+        'cogs.remind_cog', 
+        'cogs.news_cog', 
+        'cogs.poll_cog', 
+        'cogs.help_cog',
+        'cogs.chuck_jokes_cog',
+        'cogs.zkillboard_cog', 
+        'cogs.confess_cog',
+        'cogs.timer_cog'
+    ]
     for cog in cogs:
         if cog not in bot.extensions:
             try:
