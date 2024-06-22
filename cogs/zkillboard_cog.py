@@ -13,8 +13,8 @@ log = logging.getLogger(__name__)
 class ZKillboardCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.region_ids = list(map(int, config('REGION_ID').split(',')))  # Region IDs from .env, comma-separated
-        self.min_value = int(config('MIN_VALUE'))  # Minimum ISK value to consider as a valuable kill
+        self.region_ids = list(map(int, config('REGION_ID').split(',')))  
+        self.min_value = int(config('MIN_VALUE'))  
         self.kills_channel_id = int(config('KILLS_CHANNEL_ID'))
 
         self.kills_processed = set()
@@ -223,10 +223,8 @@ class ZKillboardCog(commands.Cog):
             location_link = f"[{solar_system_name}](https://evemaps.dotlan.net/system/{solar_system_name})"
             region_link = f"[{region_name}](https://evemaps.dotlan.net/map/{region_name.replace(' ', '_')})"
 
-            # Fetching the icon URL for the victim's ship
             ship_icon_url = f"https://images.evetech.net/types/{ship_type_id}/render"
 
-            # Fetch the killer's information
             attackers = killmail.get('attackers', [])
             total_attackers = len(attackers)
             final_blow = None
@@ -256,7 +254,7 @@ class ZKillboardCog(commands.Cog):
                 title="Valuable Kill Detected!",
                 description=f"[Killmail {kill_id}]({link})\nValue: {total_value:,} ISK",
                 color=0xFF0000,
-                timestamp=datetime.strptime(killmail_time, "%Y-%m-%dT%H:%M:%SZ")  # Use killmail time from the data
+                timestamp=datetime.strptime(killmail_time, "%Y-%m-%dT%H:%M:%SZ") 
             )
             embed.add_field(name="Victim's Ship", value=ship_name, inline=True)
             embed.add_field(name="Victim's Character", value=character_link, inline=True)
@@ -270,7 +268,7 @@ class ZKillboardCog(commands.Cog):
             embed.add_field(name="Killer's Alliance", value=killer_alliance_link, inline=True)
             embed.add_field(name="Killer's Ship", value=killer_ship_name, inline=True)
             embed.add_field(name="Total Attackers", value=str(total_attackers), inline=True)
-            embed.set_thumbnail(url=ship_icon_url)  # Add the ship icon as a thumbnail
+            embed.set_thumbnail(url=ship_icon_url) 
             embed.set_footer(text="Reported by Chuck Norris Bot")
 
             await channel.send(embed=embed)
